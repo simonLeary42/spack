@@ -36,7 +36,7 @@ class Plink(Package):
     )
 
     depends_on("atlas", when="@1.9-beta5:1.9-beta6.10")
-    depends_on("netlib-lapack", when="@1.9-beta5:1.9-beta6.10")
+    depends_on("netlib-lapack+external-blas", when="@1.9-beta5:1.9-beta6.10")
 
     with when("@1.9-beta-6.27:"):
         depends_on("zlib-api", when="@1.9-beta6.27:")
