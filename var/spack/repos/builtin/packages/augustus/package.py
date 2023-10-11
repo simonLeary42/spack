@@ -107,7 +107,7 @@ class Augustus(MakefilePackage):
                 makefile.filter(
                     "LIBS = -lbamtools -lz", "LIBS = $(BAMTOOLS)/lib64" "/libbamtools.a -lz"
                 )
-            if "bamtools@:2.4" in spec:
+            if "bamtools@:2.4" in spec or "bamtools@2.5.2" in spec:
                 makefile.filter(
                     "LIBS = -lbamtools -lz", "LIBS = $(BAMTOOLS)/lib/bamtools" "/libbamtools.a -lz"
                 )
@@ -119,7 +119,7 @@ class Augustus(MakefilePackage):
                     "LIBS = -lbamtools -lz",
                     "LIBS = {0}/lib64" "/libbamtools.a -lz".format(bamtools),
                 )
-            if "bamtools@:2.4" in spec:
+            if "bamtools@:2.4" in spec or "bamtools@2.5.2" in spec:
                 makefile.filter(
                     "LIBS = -lbamtools -lz",
                     "LIBS = {0}/lib/bamtools" "/libbamtools.a -lz".format(bamtools),
