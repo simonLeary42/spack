@@ -228,7 +228,7 @@ def root_path(name, module_set_name):
     return spack.util.path.canonicalize_path(path)
 
 
-def generate_module_index(root, modules, overwrite=False):
+def generate_module_index(root, modules, remove_hashes=None, overwrite=False):
     index_path = os.path.join(root, "module-index.yaml")
     if overwrite or not os.path.exists(index_path):
         entries = syaml.syaml_dict()
@@ -240,6 +240,14 @@ def generate_module_index(root, modules, overwrite=False):
     for m in modules:
         entry = {"path": m.layout.filename, "use_name": m.layout.use_name}
         entries[m.spec.dag_hash()] = entry
+
+    if remove_hashes is not None:
+        for hash in remove_hashes:
+            try:
+                entries.pop(hash)
+            except KeyError:
+                tty.debug(f'Attempted to remove nonexistent hash "{hash}" from module index')
+
     index = {"module_index": entries}
     llnl.util.filesystem.mkdirp(root)
     with open(index_path, "w") as index_file:
@@ -897,7 +905,7 @@ class BaseModuleFileWriter:
         # ... and return the first match
         return choices.pop(0)
 
-    def write(self, overwrite=False):
+    def write(self, overwrite=False, do_update_index=True):
         """Writes the module file.
 
         Args:
@@ -910,6 +918,12 @@ class BaseModuleFileWriter:
             msg = "\tNOT WRITING: {0} [EXCLUDED]"
             tty.debug(msg.format(self.spec.cshort_spec))
             return
+
+        # register this spec to this module file in the module index
+        # even if it already exists and I'm not about to overwrite it
+        # this allows me to avoid accidentally deleting that file in the future
+        if do_update_index:
+            generate_module_index(self.layout.dirname(), [self])
 
         # Print a warning in case I am accidentally overwriting
         # a module file that is already there (name clash)
@@ -1040,10 +1054,32 @@ class BaseModuleFileWriter:
                 with open(modulerc_path, "w") as f:
                     f.write("\n".join(content))
 
+    def test_name_clash(self) -> bool:
+        """Scan the module index to see if more than one package claims to use this module."""
+        module_index = read_module_index(self.layout.dirname())
+        already_found_package = False
+        for module_properties in module_index.values():
+            if module_properties.path == self.layout.filename:
+                if already_found_package:
+                    return True
+                already_found_package = True
+        return False
+
     def remove(self):
         """Deletes the module file."""
         mod_file = self.layout.filename
         if os.path.exists(mod_file):
+            is_clash = self.test_name_clash()
+            # remove this spec from the module index
+            # must be in module index for clash test, must be removed whether clash or not
+            generate_module_index(self.layout.dirname(), [], remove_hashes=[self.spec.dag_hash()])
+            if is_clash:
+                tty.warn(
+                    "Skipping module deletion due to name clash:\n"
+                    + f"file: {mod_file}\n"
+                    + f"spec: {self.spec.format(self.spec.cshort_spec)}"
+                )
+                return
             try:
                 os.remove(mod_file)  # Remove the module file
                 self.remove_module_defaults()  # Remove default targeting module file

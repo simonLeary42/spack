@@ -2,6 +2,9 @@
 # Spack Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
+import pathlib
+import random
+import string
 import pytest
 
 import spack.config
@@ -58,7 +61,8 @@ def factory(request):
 
 @pytest.fixture()
 def mock_module_filename(monkeypatch, tmpdir):
-    filename = str(tmpdir.join("module"))
+    random_chars = "".join(random.choices(string.ascii_lowercase, k=5))
+    filename = tmp_path / f"module-{random_chars}"
     # Set for both module types so we can test both
     monkeypatch.setattr(spack.modules.lmod.LmodFileLayout, "filename", filename)
     monkeypatch.setattr(spack.modules.tcl.TclFileLayout, "filename", filename)
